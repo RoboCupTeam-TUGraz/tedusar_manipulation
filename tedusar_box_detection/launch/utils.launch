@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Launches things you need for a standalone test: OpenNI and a static transform publisher from base_link (whatever that is to you) to camera_link. -->
+  
+  <include file="$(find openni_launch)/launch/openni.launch" />
+  
+  <!-- <include file="$(find openni2_launch)/launch/openni2.launch">
+    <arg name="camera" value="asus" />
+    <arg name="publish_tf" default="false" />
+  </include> -->
+  
+  <node pkg="tf" type="static_transform_publisher" name="base_link_camera_link_tf_pub" args="0.0 0.0 0.78 0.0 0.55 0.0 base_link camera_link 5"/>
+</launch>
+

@@ -3,6 +3,7 @@
 #include <sstream>
 #include <boost/algorithm/string.hpp>
 #include <boost/bind.hpp>
+#include <boost/make_shared.hpp>
 #include <pcl/common/common.h>
 #include <pcl/common/pca.h>
 #include <pcl/conversions.h>
@@ -14,7 +15,10 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/transforms.h>
 #include <moveit_msgs/CollisionObject.h>
+#include <visualization_msgs/MarkerArray.h>
 
+
+static const std::string VISUALIZATION_MARKER_NAMESPACE = "tedusar_box_detection";
 
 
 static bool operator<=(const Eigen::Vector3f & v1, const Eigen::Vector3f & v2)
@@ -34,6 +38,9 @@ BoxDetectionNode::BoxDetectionNode()
 
     if (parameters_.have_collision_object_publisher_)
         planning_scene_publisher_ = nh_.advertise<moveit_msgs::PlanningScene>("planning_scene", 1);
+
+    if (parameters_.have_visualization_marker_publisher_)
+        visualization_marker_publisher_ = nh_.advertise<visualization_msgs::MarkerArray>("visualization_marker_array", 10);
 
     if (parameters_.have_plane_publisher_)
     {
@@ -66,6 +73,7 @@ void BoxDetectionNode::loadParameters()
     getOptionalParameter(private_nh, "clusterization_tolerance", parameters_.clusterization_tolerance_, 0.02);
     getOptionalParameter(private_nh, "have_plane_publisher", parameters_.have_plane_publisher_, true);
     getOptionalParameter(private_nh, "have_collision_object_publisher", parameters_.have_collision_object_publisher_, true);
+    getOptionalParameter(private_nh, "have_visualization_marker_publisher", parameters_.have_visualization_marker_publisher_, true);
     getOptionalParameter(private_nh, "publishing_rate", parameters_.publishing_rate_, 2.0);
     getOptionalParameter(private_nh, "have_action_server_debug_output", parameters_.have_action_server_debug_output_, true);
     getOptionalParameter(private_nh, "have_box_detection_debug_output", parameters_.have_box_detection_debug_output_, true);
@@ -135,6 +143,22 @@ void BoxDetectionNode::boxDetectionActionGoalCallback()
     plane_cloud_.channels.at(0).name = "intensity";
     plane_intensity_ = 0;
 
+    // Delete all visualization markers:
+    if (visualization_marker_publisher_ && !boxes_.empty())
+    {
+        visualization_msgs::MarkerArrayPtr markers = boost::make_shared<visualization_msgs::MarkerArray>();
+        markers->markers.resize(boxes_.size());
+        for (size_t i = 0; i < boxes_.size(); ++i)
+        {
+            visualization_msgs::Marker & marker = markers->markers[i];
+            marker.ns = VISUALIZATION_MARKER_NAMESPACE;
+            marker.id = boxes_[i].id_;
+            marker.header.frame_id = boxes_[i].pose_.header.frame_id;
+            marker.action = visualization_msgs::Marker::DELETE;
+        }
+        visualization_marker_publisher_.publish(markers);
+    }
+
     boxes_.clear();
 }
 
@@ -166,7 +190,6 @@ void BoxDetectionNode::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
     pcl::fromROSMsg(*msg, *cloud);
     pcl_ros::transformPointCloud(parameters_.target_frame_id_, *cloud, *transformed_cloud, tf_listener_);
 
-    bool box_found = false;
     do
     {
         PclPointCloud::Ptr plane_cloud = boost::make_shared<PclPointCloud>();
@@ -217,17 +240,18 @@ void BoxDetectionNode::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
 
                 if (parameters_.have_collision_object_publisher_)
                     publishCollisionObject(box);
+                if (parameters_.have_visualization_marker_publisher_)
+                    publishVisualizationMarker(box);
                 publishActionFeedback(box);
 
                 if (parameters_.have_box_detection_debug_output_)
                     ROS_INFO_STREAM("FOUND BOX! Name: " << box.name_ << "; pose: " << box.pose_.pose << "; size: " << box.size_);
-                box_found = true;
             }
         }
 
         transformed_cloud = remaining_cloud;
     }
-    while (!box_found && box_detection_as_.isActive() && ros::Time::now() < detection_timeout_time_);
+    while (box_detection_as_.isActive() && ros::Time::now() < detection_timeout_time_);
 
     if (box_detection_as_.isActive())
     {
@@ -338,9 +362,11 @@ bool BoxDetectionNode::fitBox(const PclPointCloud::ConstPtr & cloud, Box & box)
     Eigen::Quaternion<float> orientation;
     orientation.setFromTwoVectors(Eigen::Vector3f::UnitX(), eigen_vectors.col(0));
 
-    // Generate name and put data into Box structure:
+    // Generate id and name and put data into Box structure:
+    box.id_ = box_counter_++;
+
     std::ostringstream ss;
-    ss << parameters_.collision_objects_basename_ << box_counter_++;
+    ss << parameters_.collision_objects_basename_ << box.id_;
     box.name_ = ss.str();
 
     box.pose_.header.frame_id = parameters_.target_frame_id_;
@@ -395,6 +421,25 @@ void BoxDetectionNode::publishCollisionObject(const Box & box)
     planning_scene.is_diff = true;
     planning_scene.world.collision_objects.push_back(object);
     planning_scene_publisher_.publish(planning_scene);
+}
+
+void BoxDetectionNode::publishVisualizationMarker(const Box & box)
+{
+    visualization_msgs::MarkerArrayPtr markers = boost::make_shared<visualization_msgs::MarkerArray>();
+    markers->markers.resize(1);
+    visualization_msgs::Marker & marker = markers->markers.at(0);
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.type = visualization_msgs::Marker::CUBE;
+    marker.ns = VISUALIZATION_MARKER_NAMESPACE;
+    marker.id = box.id_;
+    marker.header.frame_id = box.pose_.header.frame_id;
+    marker.pose = box.pose_.pose;
+    marker.scale = box.size_;
+    marker.color.r = 0.8f;
+    marker.color.g = 0.8f;
+    marker.color.b = 0.2f;
+    marker.color.a = 0.5f;
+    visualization_marker_publisher_.publish(markers);
 }
 
 void BoxDetectionNode::publishActionFeedback(const Box & box){

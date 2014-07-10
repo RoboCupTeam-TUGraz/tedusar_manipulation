@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
   tedusar_box_detection_msgs
+  visualization_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -108,14 +109,14 @@ include_directories(
 # )
 
 ## Declare a cpp executable
-add_executable(box_detection_node src/box_detection_node.cpp)
+add_executable(box_detection src/box_detection_node.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(tedusar_box_detection_node tedusar_box_detection_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(box_detection_node
+target_link_libraries(box_detection
   ${catkin_LIBRARIES}
 )
 

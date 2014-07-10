@@ -50,6 +50,7 @@ private:
         double clusterization_tolerance_;
         bool have_plane_publisher_;
         bool have_collision_object_publisher_;
+        bool have_visualization_marker_publisher_;
         double publishing_rate_;
         bool have_action_server_debug_output_;
         bool have_box_detection_debug_output_;
@@ -57,6 +58,7 @@ private:
 
     struct Box
     {
+        unsigned int id_;
         std::string name_;
         geometry_msgs::PoseStamped pose_;
         geometry_msgs::Vector3 size_;
@@ -82,6 +84,7 @@ private:
     bool fitBox(const PclPointCloud::ConstPtr & cloud, Box & box);
     void publishClusterCloud(const PclPointCloud::ConstPtr & cloud);
     void publishCollisionObject(const Box & box);
+    void publishVisualizationMarker(const Box & box);
     void publishActionFeedback(const Box & box);
 
     ros::NodeHandle nh_;
@@ -92,6 +95,7 @@ private:
     ros::Publisher plane_cloud_publisher_;
     ros::Timer publisher_timer_;
     ros::Publisher planning_scene_publisher_;
+    ros::Publisher visualization_marker_publisher_;
     ros::Time detection_timeout_time_;
     std::vector<Box> boxes_;
     sensor_msgs::PointCloud plane_cloud_;

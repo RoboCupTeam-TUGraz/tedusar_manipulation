@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="point_cloud_topic" default="/camera/depth/points" />
+  
+  <node name="box_detection" pkg="tedusar_box_detection" type="box_detection" output="screen">
+    <param name="point_cloud_topic" value="$(arg point_cloud_topic)" />
+    <param name="box_size_min" value="0.58 0.1 0.0" />
+    <param name="box_size_max" value="0.62 0.13 0.04" />
+    <!--<param name="plane_fitting_eps_angle" value="0.05" />-->
+    <param name="plane_fitting_distance_threshold" value="0.01" />
+    <!--<param name="plane_fitting_max_iterations" value="100" />-->
+  </node>
+</launch>
+
