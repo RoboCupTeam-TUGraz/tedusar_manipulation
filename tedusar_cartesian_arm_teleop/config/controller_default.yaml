@@ -1,0 +1,14 @@
+controller: Default
+button_translation_deadman_switch: 6
+button_rotation_deadman_switch: 4
+button_turbo: 7
+button_gripper_grasp: 0
+button_gripper_release: 1
+button_grasp_done: 2
+axis_translation_x: 1
+axis_translation_y: 0
+axis_translation_z: 2
+axis_rotation_x: 1
+axis_rotation_y: 0
+axis_rotation_z: 2
+

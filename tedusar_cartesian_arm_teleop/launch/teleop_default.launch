@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Type of controller (joystick) to use: -->
+  <arg name="controller" default="default" />
+
+  <node pkg="tedusar_cartesian_arm_teleop" type="cartesian_arm_teleop" name="cartesian_arm_teleop" output="screen">
+    <!--
+      Parameters:
+      frame_id
+        Frame in which TwistStamped messages are sent.
+      std_translation_vel
+        Normal (non-turbo) linear velocity.
+      std_rotation_vel
+        Normal (non-turbo) angular velocity.
+      turbo_factor
+        Factor by which normal velocities are multiplied when "turbo" button is
+        pressed.
+      
+      The mapping of joystick buttons and axes to functionalities depends on the
+      type of joystick used; these parameters are therefore read from a separate
+      configuration file (s.b.).
+    -->
+    <param name="frame_id" value="arm_6_link" />
+    <param name="std_translation_vel" value="0.01" />
+    <param name="std_rotation_vel" value="0.1" />
+    <param name="turbo_factor" value="2.0" />
+    
+    <rosparam file="$(find tedusar_cartesian_arm_teleop)/config/controller_$(arg controller).yaml" />
+  </node>
+
+  <node pkg="joy" type="joy_node" name="joy_node" />
+</launch>
