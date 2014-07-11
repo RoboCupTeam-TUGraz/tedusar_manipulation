@@ -1,3 +1,40 @@
+/*********************************************************************
+ *
+ *  Software License Agreement (BSD License)
+ *
+ *  Copyright (c) 2014, Alexander Buchegger
+ *                      Institute for Software Technology,
+ *                      Graz University of Technology
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above
+ *     copyright notice, this list of conditions and the following
+ *     disclaimer in the documentation and/or other materials provided
+ *     with the distribution.
+ *   * Neither the name of Graz University of Technology nor the names of
+ *     its contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *  POSSIBILITY OF SUCH DAMAGE.
+ *
+ *********************************************************************/
 #ifndef TEDUSAR_BOX_DETECTION__BOX_DETECTION_H_
 #define TEDUSAR_BOX_DETECTION__BOX_DETECTION_H_
 
@@ -37,23 +74,27 @@ private:
     struct Parameters
     {
         std::string point_cloud_topic_;
-        Eigen::Vector3f box_size_min_;
-        Eigen::Vector3f box_size_max_;
-        double detection_timeout_;
-        int min_points_per_plane_;
         std::string target_frame_id_;
-        std::string collision_objects_basename_;
+        bool have_action_server_debug_output_;
+        bool have_box_detection_debug_output_;
+
+        int box_plane_points_min_;
+        Eigen::Vector3f box_plane_size_min_;
+        Eigen::Vector3f box_plane_size_max_;
+        double detection_timeout_;
         double plane_fitting_distance_threshold_;
-        double plane_fitting_eps_angle_;
         int plane_fitting_max_iterations_;
         double downsampling_leaf_size_;
         double clusterization_tolerance_;
+
         bool have_plane_publisher_;
+        double plane_publishing_rate_;
+
         bool have_collision_object_publisher_;
+        std::string collision_objects_basename_;
+
         bool have_visualization_marker_publisher_;
-        double publishing_rate_;
-        bool have_action_server_debug_output_;
-        bool have_box_detection_debug_output_;
+        std::string visualization_marker_namespace_;
     };
 
     struct Box
@@ -72,7 +113,7 @@ private:
     void boxDetectionActionGoalCallback();
     void boxDetectionActionPreemptCallback();
     void pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr & msg);
-    void publisherTimerCallback(const ros::TimerEvent &);
+    void planePublisherTimerCallback(const ros::TimerEvent &);
 
     void fitPlane(const PclPointCloud::ConstPtr & cloud, pcl::PointIndices::Ptr & inliers);
     void extractPlane(const PclPointCloud::ConstPtr & cloud,
@@ -93,7 +134,7 @@ private:
     tf::TransformListener tf_listener_;
     ros::Subscriber point_cloud_subscriber_;
     ros::Publisher plane_cloud_publisher_;
-    ros::Timer publisher_timer_;
+    ros::Timer plane_publisher_timer_;
     ros::Publisher planning_scene_publisher_;
     ros::Publisher visualization_marker_publisher_;
     ros::Time detection_timeout_time_;

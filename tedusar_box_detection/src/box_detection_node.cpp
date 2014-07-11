@@ -1,3 +1,40 @@
+/*********************************************************************
+ *
+ *  Software License Agreement (BSD License)
+ *
+ *  Copyright (c) 2014, Alexander Buchegger
+ *                      Institute for Software Technology,
+ *                      Graz University of Technology
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above
+ *     copyright notice, this list of conditions and the following
+ *     disclaimer in the documentation and/or other materials provided
+ *     with the distribution.
+ *   * Neither the name of Graz University of Technology nor the names of
+ *     its contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *  POSSIBILITY OF SUCH DAMAGE.
+ *
+ *********************************************************************/
 #include <tedusar_box_detection/box_detection_node.h>
 #include <iostream>
 #include <sstream>
@@ -17,8 +54,6 @@
 #include <moveit_msgs/CollisionObject.h>
 #include <visualization_msgs/MarkerArray.h>
 
-
-static const std::string VISUALIZATION_MARKER_NAMESPACE = "tedusar_box_detection";
 
 
 static bool operator<=(const Eigen::Vector3f & v1, const Eigen::Vector3f & v2)
@@ -45,7 +80,7 @@ BoxDetectionNode::BoxDetectionNode()
     if (parameters_.have_plane_publisher_)
     {
         plane_cloud_publisher_ = nh_.advertise<sensor_msgs::PointCloud>("plane_cloud", 1);
-        publisher_timer_ = nh_.createTimer(ros::Rate(parameters_.publishing_rate_), &BoxDetectionNode::publisherTimerCallback, this);
+        plane_publisher_timer_ = nh_.createTimer(ros::Rate(parameters_.plane_publishing_rate_), &BoxDetectionNode::planePublisherTimerCallback, this);
     }
 
     box_detection_as_.registerGoalCallback(boost::bind(&BoxDetectionNode::boxDetectionActionGoalCallback, this));
@@ -59,24 +94,32 @@ BoxDetectionNode::BoxDetectionNode()
 void BoxDetectionNode::loadParameters()
 {
     ros::NodeHandle private_nh("~");
-    getOptionalParameter(private_nh, "point_cloud_topic", parameters_.point_cloud_topic_, std::string("/camera/depth/points"));
-    getOptionalParameter(private_nh, "box_size_min", parameters_.box_size_min_, Eigen::Vector3f(0.26, 0.07, 0.0));
-    getOptionalParameter(private_nh, "box_size_max", parameters_.box_size_max_, Eigen::Vector3f(0.45, 0.12, 0.05));
-    getOptionalParameter(private_nh, "detection_timeout", parameters_.detection_timeout_, 30.0);
-    getOptionalParameter(private_nh, "min_points_per_plane", parameters_.min_points_per_plane_, 100);
-    getOptionalParameter(private_nh, "target_frame_id", parameters_.target_frame_id_, std::string("base_link"));
-    getOptionalParameter(private_nh, "collision_objects_basename", parameters_.collision_objects_basename_, std::string("box"));
-    getOptionalParameter(private_nh, "plane_fitting_distance_threshold", parameters_.plane_fitting_distance_threshold_, 0.02);
-    getOptionalParameter(private_nh, "plane_fitting_eps_angle", parameters_.plane_fitting_eps_angle_, 0.05);
-    getOptionalParameter(private_nh, "plane_fitting_max_iterations", parameters_.plane_fitting_max_iterations_, 50);
-    getOptionalParameter(private_nh, "downsampling_leaf_size", parameters_.downsampling_leaf_size_, 0.005);
-    getOptionalParameter(private_nh, "clusterization_tolerance", parameters_.clusterization_tolerance_, 0.02);
-    getOptionalParameter(private_nh, "have_plane_publisher", parameters_.have_plane_publisher_, true);
-    getOptionalParameter(private_nh, "have_collision_object_publisher", parameters_.have_collision_object_publisher_, true);
-    getOptionalParameter(private_nh, "have_visualization_marker_publisher", parameters_.have_visualization_marker_publisher_, true);
-    getOptionalParameter(private_nh, "publishing_rate", parameters_.publishing_rate_, 2.0);
-    getOptionalParameter(private_nh, "have_action_server_debug_output", parameters_.have_action_server_debug_output_, true);
-    getOptionalParameter(private_nh, "have_box_detection_debug_output", parameters_.have_box_detection_debug_output_, true);
+#define GOP(key, default_value) getOptionalParameter(private_nh, #key, parameters_.key##_, default_value)
+#define GRP(key) getRequiredParameter(private_nh, #key, parameters_.key##_)
+    GOP(point_cloud_topic, std::string("/camera/depth/points"));
+    GOP(target_frame_id, std::string("base_link"));
+    GOP(have_action_server_debug_output, true);
+    GOP(have_box_detection_debug_output, true);
+
+    GOP(box_plane_points_min, 100);
+    GRP(box_plane_size_min);
+    GRP(box_plane_size_max);
+    GOP(detection_timeout, 30.0);
+    GOP(plane_fitting_distance_threshold, 0.02);
+    GOP(plane_fitting_max_iterations, 50);
+    GOP(downsampling_leaf_size, 0.005);
+    GOP(clusterization_tolerance, 0.02);
+
+    GOP(have_plane_publisher, true);
+    GOP(plane_publishing_rate, 2.0);
+
+    GOP(have_collision_object_publisher, true);
+    GOP(collision_objects_basename, std::string("box"));
+
+    GOP(have_visualization_marker_publisher, true);
+    GOP(visualization_marker_namespace, std::string("tedusar_box_detection"));
+#undef GOP
+#undef GRP
 }
 
 template <typename T>
@@ -151,7 +194,7 @@ void BoxDetectionNode::boxDetectionActionGoalCallback()
         for (size_t i = 0; i < boxes_.size(); ++i)
         {
             visualization_msgs::Marker & marker = markers->markers[i];
-            marker.ns = VISUALIZATION_MARKER_NAMESPACE;
+            marker.ns = parameters_.visualization_marker_namespace_;
             marker.id = boxes_[i].id_;
             marker.header.frame_id = boxes_[i].pose_.header.frame_id;
             marker.action = visualization_msgs::Marker::DELETE;
@@ -199,7 +242,7 @@ void BoxDetectionNode::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
         pcl::PointIndices::Ptr inliers = boost::make_shared<pcl::PointIndices>();
         fitPlane(transformed_cloud, inliers);
 
-        if (inliers->indices.size() < parameters_.min_points_per_plane_)
+        if (inliers->indices.size() < parameters_.box_plane_points_min_)
             break; // Plane isn't even big enough for one box => stop
 
         if (parameters_.have_box_detection_debug_output_)
@@ -211,6 +254,7 @@ void BoxDetectionNode::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
         if (parameters_.have_box_detection_debug_output_)
             ROS_INFO("Downsampled it to %d points", downsampled_plane_cloud->size());
 
+        // Split into individual planes; may return empty list if clusters are too small:
         std::vector<pcl::PointIndices> cluster_indices;
         clusterizeCloud(downsampled_plane_cloud, cluster_indices);
 
@@ -268,7 +312,7 @@ void BoxDetectionNode::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
 }
 
 
-void BoxDetectionNode::publisherTimerCallback(const ros::TimerEvent &)
+void BoxDetectionNode::planePublisherTimerCallback(const ros::TimerEvent &)
 {
     plane_cloud_publisher_.publish(plane_cloud_);
 }
@@ -280,8 +324,6 @@ void BoxDetectionNode::fitPlane(const PclPointCloud::ConstPtr & cloud, pcl::Poin
 
     segmentation.setModelType(pcl::SACMODEL_PLANE);
     segmentation.setMethodType(pcl::SAC_RANSAC);
-    segmentation.setAxis(Eigen::Vector3f::UnitZ()); // We assume we look at the boxes from the top.
-    segmentation.setEpsAngle(parameters_.plane_fitting_eps_angle_);
     segmentation.setMaxIterations(parameters_.plane_fitting_max_iterations_);
     segmentation.setDistanceThreshold(parameters_.plane_fitting_distance_threshold_);
     segmentation.setInputCloud(cloud);
@@ -326,7 +368,7 @@ void BoxDetectionNode::clusterizeCloud(const PclPointCloud::ConstPtr & cloud, st
     ece.setInputCloud(cloud);
     ece.setSearchMethod(tree);
     ece.setClusterTolerance(parameters_.clusterization_tolerance_);
-    ece.setMinClusterSize(parameters_.min_points_per_plane_);
+    ece.setMinClusterSize(parameters_.box_plane_points_min_);
 
     ece.extract(cluster_indices);
 }
@@ -348,8 +390,12 @@ bool BoxDetectionNode::fitBox(const PclPointCloud::ConstPtr & cloud, Box & box)
     Eigen::Vector3f size = max_pt.topRows(3) - min_pt.topRows(3);
 
     // Fail if cloud size is outside sensible limits:
-    if (!(parameters_.box_size_min_ <= size && size <= parameters_.box_size_max_))
+    if (!(parameters_.box_plane_size_min_ <= size && size <= parameters_.box_plane_size_max_))
+    {
+        if (parameters_.have_box_detection_debug_output_)
+            ROS_INFO_STREAM("Cluster size is outside limits: " << size);
         return false;
+    }
 
     size.z() = size.y(); // We don't get the box's height from the plane, so we simply assume a square base
 
@@ -430,7 +476,7 @@ void BoxDetectionNode::publishVisualizationMarker(const Box & box)
     visualization_msgs::Marker & marker = markers->markers.at(0);
     marker.action = visualization_msgs::Marker::ADD;
     marker.type = visualization_msgs::Marker::CUBE;
-    marker.ns = VISUALIZATION_MARKER_NAMESPACE;
+    marker.ns = parameters_.visualization_marker_namespace_;
     marker.id = box.id_;
     marker.header.frame_id = box.pose_.header.frame_id;
     marker.pose = box.pose_.pose;
