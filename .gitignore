@@ -1,3 +1,33 @@
-# QtCreator:
-CMakeLists.txt.user
+*.tmp
+*.bak
+*.cfgc
+*.user
+*~
+.svn
+bin
+build
+lib
+srv_gen
+msg_gen
+_*.py
+CMakeFiles
+CMakeCache.txt
+cmake_install.cmake
+*Config.h
+*Config.py
+docs
+qtcreator-build
+*.tif
+*.tfw
+*.bag
+*.pyc
+*.log
+*.class
+.project
+.cproject
 
+.settings
+*.stlb
+
+*qr_code.txt
+*victim.txt
