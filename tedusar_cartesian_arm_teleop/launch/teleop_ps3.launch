@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch>
+
+    <include file="$(find tedusar_cartesian_arm_teleop)/launch/teleop_default.launch">
+        <arg name="controller" value="ps3" />
+    </include>
+
+</launch>

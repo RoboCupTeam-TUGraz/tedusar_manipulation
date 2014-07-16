@@ -1,0 +1,9 @@
+# Goal:
+---
+# Result:
+string[] box_names
+geometry_msgs/PoseStamped[] box_poses
+---
+# Feedback:
+string box_name
+geometry_msgs/PoseStamped box_pose
