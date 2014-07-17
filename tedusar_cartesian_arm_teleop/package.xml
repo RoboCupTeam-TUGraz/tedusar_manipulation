@@ -8,7 +8,7 @@
 
   <license>BSD</license>
 
-  <!-- <url type="website">http://wiki.ros.org/tedusar_cartesian_arm_teleop</url> -->
+  <url type="website">http://wiki.ros.org/tedusar_cartesian_arm_teleop</url>
 
 
   <buildtool_depend>catkin</buildtool_depend>
