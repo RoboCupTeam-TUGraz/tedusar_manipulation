@@ -2,11 +2,11 @@
 <package>
   <name>tedusar_cartesian_controller</name>
   <version>0.0.0</version>
-  <description>The tedusar_cartesian_controller package</description>
+  <description>A controller for ros_control enabling moving an arm's tool frame in a cartesian coordinate frame.</description>
   <maintainer email="johannes.maurer@ist.tugraz.at">Johannes Maurer</maintainer>
   <license>BSD</license>
 
-  <!-- <url type="website">http://wiki.ros.org/cartesian_arm_controller</url> -->
+  <url type="website">http://wiki.ros.org/cartesian_arm_controller</url>
 
   <author email="johannes.maurer@ist.tugraz.at">Johannes Maurer</author>
   <author email="alexander.buchegger@student.tugraz.at">Alexander Buchegger</author>

@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package>
+  <name>tedusar_manipulation</name>
+  <version>0.0.0</version>
+  <description>A set of packages related to semi-autonomous manipulation of objects using an arm with a simple gripper.</description>
+
+  <maintainer email="alexander.buchegger@student.tugraz.at">Alexander Buchegger</maintainer>
+
+  <license>TODO</license>
+
+  <url type="website">http://wiki.ros.org/tedusar_manipulation</url>
+
+  <author email="alexander.buchegger@student.tugraz.at">Alexander Buchegger</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <run_depend>tedusar_box_detection</run_depend>
+  <run_depend>tedusar_box_detection_msgs</run_depend>
+  <run_depend>tedusar_cartesian_arm_teleop</run_depend>
+  <run_depend>tedusar_cartesian_controller</run_depend>
+
+  <export>
+    <metapackage/>
+  </export>
+</package>
