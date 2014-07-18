@@ -10,6 +10,8 @@
 
   <url type="website">http://wiki.ros.org/tedusar_cartesian_arm_teleop</url>
 
+  <author email="alexannder.buchegger@student.tugraz.at">Alexander Buchegger</author>
+
   <buildtool_depend>catkin</buildtool_depend>
 
   <build_depend>actionlib</build_depend>
