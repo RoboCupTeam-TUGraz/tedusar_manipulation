@@ -8,8 +8,8 @@
 
   <license>BSD</license>
 
+  <url type="website">http://wiki.ros.org/tedusar_box_detection</url>
 
-  <!-- <url type="website">http://wiki.ros.org/tedusar_box_detection</url> -->
 
 
   <buildtool_depend>catkin</buildtool_depend>
